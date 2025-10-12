@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Sosial Media Wayan</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5; /* Warna latar belakang yang lembut */
+            color: #1c1e21;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        .profile-pic {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            margin-bottom: 15px;
+        }
+        h1 {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin: 0;
+        }
+        p.username {
+            font-size: 1em;
+            color: #606770;
+            margin-bottom: 30px;
+        }
+        .links-container a {
+            display: block;
+            background-color: #007bff; /* Warna biru primer */
+            color: white;
+            padding: 18px 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1em;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .links-container a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        /* Warna spesifik untuk setiap tombol */
+        .whatsapp { background-color: #25D366; }
+        .instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+        .tiktok { background-color: #000000; }
+        .footer {
+            margin-top: 30px;
+            font-size: 0.8em;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- GANTI DENGAN URL FOTO PROFIL ANDA -->
+        <img src="https://via.placeholder.com/150" alt="Foto Profil" class="profile-pic">
+        
+        <h1>Wayan</h1>
+        <p class="username">@wayansocials</p>
+
+        <div class="links-container">
+            <!-- Ganti dengan link Anda yang sebenarnya -->
+            <a href="javascript:void(0);" onclick="trackAndRedirect('https://wa.me/62NOMOR_WHATSAPP_ANDA', this)" class="whatsapp">WhatsApp</a>
+            <a href="javascript:void(0);" onclick="trackAndRedirect('https://www.instagram.com/USERNAME_INSTAGRAM/', this)" class="instagram">Instagram</a>
+            <a href="javascript:void(0);" onclick="trackAndRedirect('https://www.tiktok.com/@USERNAME_TIKTOK', this)" class="tiktok">TikTok</a>
+        </div>
+        
+        <p class="footer">Klik salah satu link di atas untuk terhubung.</p>
+    </div>
+
+    <script>
+        // URL Google Apps Script Anda sudah dimasukkan di sini
+        const webAppUrl = 'https://script.google.com/macros/s/AKfycbx7OApXdLMTGTduxPIK9iyBzE7AkWCcz70i-lNglxnOAVh4FhxVpX84yFGYiQyjGa9eXg/exec';
+
+        function trackAndRedirect(destinationUrl, element) {
+            // Ubah teks tombol untuk memberikan feedback ke pengguna
+            const originalText = element.textContent;
+            element.textContent = 'Membuka...';
+
+            // Ambil data geolokasi
+            fetch('https://ip-api.com/json/')
+                .then(response => response.json())
+                .then(locationData => {
+                    // Jika data lokasi berhasil didapat, kirim ke Google Sheet
+                    if (locationData.status === 'success') {
+                        // Tambahkan info link yang di-klik ke data
+                        locationData.clickedLink = destinationUrl;
+
+                        // Kirim data ke Google Sheet di latar belakang
+                        // 'no-cors' mode berarti kita mengirim data tanpa menunggu balasan,
+                        // yang membuat proses ini sangat cepat bagi pengguna.
+                        fetch(webAppUrl, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(locationData)
+                        });
+                    }
+                })
+                .catch(err => {
+                    // Jika ada error (misal: offline), catat di console
+                    console.error("Gagal mengambil data IP atau mengirim ke sheet:", err);
+                })
+                .finally(() => {
+                    // Setelah semua proses (baik berhasil maupun gagal),
+                    // arahkan pengguna ke tujuan yang sebenarnya.
+                    window.location.href = destinationUrl;
+                });
+        }
+    </script>
+
+</body>
+</html>
