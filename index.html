@@ -91,42 +91,46 @@
 
     <script>
         // URL Google Apps Script Anda sudah dimasukkan di sini
-        const webAppUrl = 'https://script.google.com/macros/s/AKfycby5L7UgG9BoJtxtXPlNEzLW-WijOEsEbB6Mg1agRqMfm3Xv00T-px-aDIMubB-6TgIuRQ/exec';
+        const webAppUrl = 'PASTE_URL_BARU_ANDA_DARI_HASIL_DEPLOY_DI_SINI';
 
         function trackAndRedirect(destinationUrl, element) {
             // Ubah teks tombol untuk memberikan feedback ke pengguna
             const originalText = element.textContent;
             element.textContent = 'Membuka...';
 
-            // Ambil data geolokasi
-            fetch('https://ip-api.com/json/')
-                .then(response => response.json())
-                .then(locationData => {
-                    // Jika data lokasi berhasil didapat, kirim ke Google Sheet
-                    if (locationData.status === 'success') {
-                        // Tambahkan info link yang di-klik ke data
-                        locationData.clickedLink = destinationUrl;
+            // Fungsi untuk mengirim data ke Google Sheet
+            const sendDataToSheet = (data) => {
+                // 'no-cors' mode berarti kita mengirim data tanpa menunggu balasan,
+                // yang membuat proses ini sangat cepat bagi pengguna.
+                fetch(webAppUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(data)
+                }).catch(err => console.error("Gagal mengirim data ke sheet:", err)); // Tambahkan penanganan error
+            };
 
-                        // Kirim data ke Google Sheet di latar belakang
-                        // 'no-cors' mode berarti kita mengirim data tanpa menunggu balasan,
-                        // yang membuat proses ini sangat cepat bagi pengguna.
-                        fetch(webAppUrl, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify(locationData)
-                        });
-                    }
-                })
-                .catch(err => {
-                    // Jika ada error (misal: offline), catat di console
-                    console.error("Gagal mengambil data IP atau mengirim ke sheet:", err);
-                })
-                .finally(() => {
-                    // Setelah semua proses (baik berhasil maupun gagal),
-                    // arahkan pengguna ke tujuan yang sebenarnya.
-                    window.location.href = destinationUrl;
-                });
+            // Coba ambil data geolokasi
+            fetch('https://ip-api.com/json/', { signal: AbortSignal.timeout(3000) }) // Tambahkan timeout 3 detik
+              .then(response => {
+                  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                  return response.json();
+              })
+              .then(locationData => {
+                  // Jika berhasil, kirim data lengkap
+                  locationData.clickedLink = destinationUrl;
+                  sendDataToSheet(locationData);
+              })
+              .catch(err => {
+                  // Jika gagal (karena diblokir, timeout, atau error lain), kirim data seadanya
+                  console.error("Gagal mengambil data IP:", err.message);
+                  const fallbackData = { query: 'Gagal Dimuat', clickedLink: destinationUrl };
+                  sendDataToSheet(fallbackData);
+              })
+              .finally(() => {
+                  // Setelah semua proses, arahkan pengguna ke tujuan
+                  window.location.href = destinationUrl;
+              });
         }
     </script>
 
