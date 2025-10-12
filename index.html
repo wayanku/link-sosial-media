@@ -15,22 +15,30 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            padding: 20px;
             box-sizing: border-box;
         }
         .container {
             max-width: 400px;
             width: 100%;
+            padding: 20px;
             text-align: center;
         }
         .profile-pic {
+            display: flex;
+            justify-content: center;
+            align-items: center;
             width: 120px;
             height: 120px;
             border-radius: 50%;
-            object-fit: cover;
             border: 3px solid white;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            margin-bottom: 15px;
+            margin: 0 auto 15px; /* Atas 0, Kanan/Kiri auto, Bawah 15px */
+            background-color: #ccc; /* Warna latar belakang ikon */
+            color: white; /* Warna ikon siluet */
+        }
+        .profile-pic svg {
+            width: 60%;
+            height: 60%;
         }
         h1 {
             font-size: 1.5em;
@@ -73,8 +81,12 @@
 <body>
 
     <div class="container">
-        <!-- GANTI DENGAN URL FOTO PROFIL ANDA -->
-        <img src="https://via.placeholder.com/150" alt="Foto Profil" class="profile-pic">
+        <!-- Ikon Profil Placeholder -->
+        <div class="profile-pic">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor">
+                <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
+            </svg>
+        </div>
         
         <h1>Wayan</h1>
         <p class="username">@wayansocials</p>
