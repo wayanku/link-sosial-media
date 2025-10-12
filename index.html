@@ -111,14 +111,18 @@
             };
 
             // Coba ambil data geolokasi
-            fetch('https://ip-api.com/json/', { signal: AbortSignal.timeout(3000) }) // Tambahkan timeout 3 detik
+            fetch('https://ipinfo.io/json', { signal: AbortSignal.timeout(3000) }) // Menggunakan alternatif: ipinfo.io
               .then(response => {
                   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                   return response.json();
               })
               .then(locationData => {
                   // Jika berhasil, kirim data lengkap
+                  // Menyesuaikan nama field dari ipinfo.io ke format kita
+                  locationData.query = locationData.ip;
+                  locationData.regionName = locationData.region;
                   locationData.clickedLink = destinationUrl;
+
                   sendDataToSheet(locationData);
               })
               .catch(err => {
