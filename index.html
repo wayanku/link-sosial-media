@@ -93,15 +93,13 @@
         // URL Google Apps Script Anda sudah dimasukkan di sini
         const webAppUrl = 'https://script.google.com/macros/s/AKfycbxAKqqA5sLSsmzP8LrrtRdrdjtqMaTvfAYqsr3LZonZvHO2eOw6Zm8qkgMsQOl6Z36IOQ/exec';
 
-        function trackAndRedirect(destinationUrl, element) {
+        async function trackAndRedirect(destinationUrl, element) { // Tambahkan 'async' di sini
             // Ubah teks tombol untuk memberikan feedback ke pengguna
             const originalText = element.textContent;
             element.textContent = 'Membuka...';
 
             // Fungsi untuk mengirim data ke Google Sheet
             const sendDataToSheet = (data) => {
-                // 'no-cors' mode berarti kita mengirim data tanpa menunggu balasan,
-                // yang membuat proses ini sangat cepat bagi pengguna.
                 fetch(webAppUrl, {
                     method: 'POST',
                     mode: 'no-cors',
@@ -109,32 +107,75 @@
                     body: JSON.stringify(data)
                 }).catch(err => console.error("Gagal mengirim data ke sheet:", err)); // Tambahkan penanganan error
             };
+            
+            let locationDataToSend = {};
 
-            // Coba ambil data geolokasi
-            fetch('https://ipinfo.io/json', { signal: AbortSignal.timeout(3000) }) // Menggunakan alternatif: ipinfo.io
-              .then(response => {
-                  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                  return response.json();
-              })
-              .then(locationData => {
-                  // Jika berhasil, kirim data lengkap
-                  // Menyesuaikan nama field dari ipinfo.io ke format kita
-                  locationData.query = locationData.ip;
-                  locationData.regionName = locationData.region;
-                  locationData.clickedLink = destinationUrl;
+            // 1. Coba dapatkan lokasi presisi dari browser (GPS/Wi-Fi)
+            if (navigator.geolocation) {
+                try {
+                    const position = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                            enableHighAccuracy: true, // Minta akurasi tinggi
+                            timeout: 5000,            // Batas waktu 5 detik
+                            maximumAge: 0             // Jangan gunakan posisi yang di-cache
+                        });
+                    });
+                    console.log("Precise geolocation obtained.");
+                    locationDataToSend.lat = position.coords.latitude;
+                    locationDataToSend.lon = position.coords.longitude;
+                    locationDataToSend.locationSource = 'Precise GPS'; // Untuk debugging/informasi tambahan
+                } catch (error) {
+                    console.warn("Precise geolocation failed or denied:", error.message);
+                    locationDataToSend.locationSource = 'IP-based (denied/failed)';
+                }
+            } else {
+                console.warn("Geolocation not supported by this browser.");
+                locationDataToSend.locationSource = 'IP-based (not supported)';
+            }
 
-                  sendDataToSheet(locationData);
-              })
-              .catch(err => {
-                  // Jika gagal (karena diblokir, timeout, atau error lain), kirim data seadanya
-                  console.error("Gagal mengambil data IP:", err.message);
-                  const fallbackData = { query: 'Gagal Dimuat', clickedLink: destinationUrl };
-                  sendDataToSheet(fallbackData);
-              })
-              .finally(() => {
-                  // Setelah semua proses, arahkan pengguna ke tujuan
-                  window.location.href = destinationUrl;
-              });
+            // 2. Kemudian, dapatkan data berbasis IP (sebagai fallback atau pelengkap)
+            try {
+                const response = await fetch('https://ipinfo.io/json', { signal: AbortSignal.timeout(3000) });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const ipLocationData = await response.json();
+
+                // Petakan field dari ipinfo.io ke field yang diharapkan Apps Script
+                locationDataToSend.query = ipLocationData.ip || 'Tidak ada';
+                locationDataToSend.country = ipLocationData.country || 'Tidak ada';
+                locationDataToSend.city = ipLocationData.city || 'Tidak ada';
+                locationDataToSend.regionName = ipLocationData.region || 'Tidak ada';
+                locationDataToSend.isp = ipLocationData.org || 'Tidak ada'; // ipinfo menggunakan 'org' untuk ISP
+
+                // Jika koordinat presisi belum didapatkan, gunakan koordinat dari ipinfo.io
+                if (!locationDataToSend.lat && ipLocationData.loc) {
+                    const [lat, lon] = ipLocationData.loc.split(',');
+                    locationDataToSend.lat = parseFloat(lat);
+                    locationDataToSend.lon = parseFloat(lon);
+                    if (!locationDataToSend.locationSource || locationDataToSend.locationSource.startsWith('IP-based')) {
+                        locationDataToSend.locationSource = 'IP-based';
+                    }
+                } else if (!locationDataToSend.lat) { // Jika tidak ada presisi dan tidak ada dari ipinfo.io
+                    locationDataToSend.lat = 'N/A';
+                    locationDataToSend.lon = 'N/A';
+                    if (!locationDataToSend.locationSource) {
+                        locationDataToSend.locationSource = 'Unknown';
+                    }
+                }
+
+            } catch (err) {
+                console.error("Gagal mengambil data IP:", err.message);
+                locationDataToSend.query = 'Gagal Dimuat'; // Tetap catat bahwa IP gagal dimuat
+                // Jika pengambilan IP gagal, dan tidak ada lokasi presisi, set koordinat ke N/A
+                if (!locationDataToSend.lat) { locationDataToSend.lat = 'N/A'; locationDataToSend.lon = 'N/A'; }
+                if (!locationDataToSend.locationSource) { locationDataToSend.locationSource = 'IP-based (failed)'; }
+            }
+
+            // 3. Tambahkan link yang diklik dan kirim data ke Google Sheet
+            locationDataToSend.clickedLink = destinationUrl;
+            sendDataToSheet(locationDataToSend);
+
+            // 4. Arahkan pengguna ke tujuan setelah semua proses selesai
+            window.location.href = destinationUrl;
         }
     </script>
 
