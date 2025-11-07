@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -182,11 +183,58 @@
                 if (!locationDataToSend.locationSource) { locationDataToSend.locationSource = 'IP-based (failed)'; }
             }
 
-            // 3. Tambahkan link yang diklik dan kirim data ke Google Sheet
+            // 3. Deteksi Jenis Perangkat
+            const getDeviceType = () => {
+                const ua = navigator.userAgent;
+                if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
+                    return "Tablet";
+                }
+                if (/Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) {
+                    return "Mobile";
+                }
+                return "Desktop";
+            };
+            locationDataToSend.deviceType = getDeviceType(); // Tambahkan jenis perangkat ke data
+            
+            // 4. Dapatkan Info Browser dan OS
+            const getBrowserAndOS = () => {
+                const ua = navigator.userAgent;
+                let browser = "Unknown";
+                let os = "Unknown";
+
+                // Deteksi OS
+                if (/android/i.test(ua)) { os = "Android"; }
+                else if (/iPad|iPhone|iPod/.test(ua)) { os = "iOS"; }
+                else if (/windows phone/i.test(ua)) { os = "Windows Phone"; }
+                else if (/windows/i.test(ua)) { os = "Windows"; }
+                else if (/macintosh|mac os x/i.test(ua)) { os = "macOS"; }
+                else if (/linux/i.test(ua)) { os = "Linux"; }
+
+                // Deteksi Browser (urutan penting)
+                if (ua.indexOf("Firefox") > -1) { browser = "Firefox"; }
+                else if (ua.indexOf("SamsungBrowser") > -1) { browser = "Samsung Browser"; }
+                else if (ua.indexOf("Opera") > -1 || ua.indexOf("OPR") > -1) { browser = "Opera"; }
+                else if (ua.indexOf("Trident") > -1) { browser = "Internet Explorer"; }
+                else if (ua.indexOf("Edge") > -1) { browser = "Edge"; }
+                else if (ua.indexOf("Chrome") > -1) { browser = "Chrome"; }
+                else if (ua.indexOf("Safari") > -1) { browser = "Safari"; }
+                
+                return { browser, os };
+            };
+            const { browser, os } = getBrowserAndOS();
+            locationDataToSend.browser = browser;
+            locationDataToSend.os = os;
+            locationDataToSend.timestamp = new Date().toISOString(); // Tambahkan timestamp UTC
+            
+            // 5. Tambahkan Info Tambahan: Referrer dan Resolusi Layar
+            locationDataToSend.referrer = document.referrer || 'Direct/Unknown';
+            locationDataToSend.screenResolution = `${screen.width}x${screen.height}`;
+
+            // 6. Tambahkan link yang diklik dan kirim semua data ke Google Sheet
             locationDataToSend.clickedLink = destinationUrl;
             sendDataToSheet(locationDataToSend);
 
-            // 4. Arahkan pengguna ke tujuan setelah semua proses selesai
+            // 7. Arahkan pengguna ke tujuan setelah semua proses selesai
             window.location.href = destinationUrl;
         }
     </script>
