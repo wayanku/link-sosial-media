@@ -20,6 +20,14 @@
             min-height: 100vh;
             box-sizing: border-box;
         }
+        /* Animasi Fade-in */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .container {
+            animation: fadeIn 0.8s ease-out;
+        }
         .container {
             max-width: 400px;
             width: 100%;
@@ -37,11 +45,8 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             margin: 0 auto 15px; /* Atas 0, Kanan/Kiri auto, Bawah 15px */
             background-color: #ccc; /* Warna latar belakang ikon */
-            color: white; /* Warna ikon siluet */
-        }
-        .profile-pic svg {
-            width: 60%;
-            height: 60%;
+            background-size: cover;
+            background-position: center;
         }
         h1 {
             font-size: 1.5em;
@@ -89,12 +94,8 @@
 <body>
 
     <div class="container">
-        <!-- Ikon Profil Placeholder -->
-        <div class="profile-pic">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor">
-                <path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/>
-            </svg>
-        </div>
+        <!-- Ganti 'URL_FOTO_PROFIL_ANDA.jpg' dengan link ke foto Anda -->
+        <div class="profile-pic" style="background-image: url('URL_FOTO_PROFIL_ANDA.jpg');"></div>
         
         <h1>Wayan</h1>
         <p class="username">@wayansocials</p>
@@ -118,14 +119,15 @@
             const originalText = element.textContent;
             element.textContent = 'Membuka...';
 
-            // Fungsi untuk mengirim data ke Google Sheet
-            const sendDataToSheet = (data) => {
-                fetch(webAppUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify(data)
-                }).catch(err => console.error("Gagal mengirim data ke sheet:", err)); // Tambahkan penanganan error
+            // Alihkan pengguna SEGERA untuk pengalaman pengguna yang lebih baik.
+            // Proses pengumpulan dan pengiriman data akan berjalan di latar belakang.
+            window.location.href = destinationUrl;
+
+            // Fungsi untuk mengirim data menggunakan navigator.sendBeacon().
+            // Ini adalah cara modern dan andal untuk mengirim data saat halaman akan ditutup.
+            const sendDataToBeacon = (data) => {
+                const blob = new Blob([JSON.stringify(data)], { type: 'text/plain; charset=UTF-8' });
+                navigator.sendBeacon(webAppUrl, blob);
             };
             
             let locationDataToSend = {};
@@ -239,10 +241,7 @@
 
             // 6. Tambahkan link yang diklik dan kirim semua data ke Google Sheet
             locationDataToSend.clickedLink = destinationUrl;
-            sendDataToSheet(locationDataToSend);
-
-            // 7. Arahkan pengguna ke tujuan setelah semua proses selesai
-            window.location.href = destinationUrl;
+            sendDataToBeacon(locationDataToSend);
         }
     </script>
 
